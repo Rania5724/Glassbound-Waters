@@ -124,14 +124,7 @@ export class DemoScene extends Scene {
     this.ui_params.light_height = [7, 6];
 
     // Set preset view
-    create_hotkey_action("Preset view", "1", () => {
-      this.camera.set_preset_view({
-        distance_factor : 0.8,
-        angle_z : 2.440681469282041,
-        angle_y : -0.29240122440170113,
-        look_at : [0, 0, 0]
-      })
-    });
+1
     
     // Create a slider to change the height of each light
     const n_steps_slider = 100;
@@ -147,7 +140,6 @@ export class DemoScene extends Scene {
     });
 
     // Add button to generate random terrain
-    create_button("Random terrain", () => {this.random_terrain()});
   }
 
   /**

@@ -127,6 +127,7 @@ export class SceneRenderer {
                 this.terrain.render(scene_state);
                 this.blinn_phong.render(s_s);
             });
+            
         })
 
         /*---------------------------------------------------------------
