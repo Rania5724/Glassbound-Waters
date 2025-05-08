@@ -137,6 +137,7 @@ export class ResourceManager{
         return [
             'kloppenheim_07_puresky_blur.jpg',
             'pine.png',
+            'wood.png',
           ];
     }
 
@@ -151,7 +152,7 @@ export class ResourceManager{
             'cubemap_visualization.vert.glsl', 'cubemap_visualization.frag.glsl',
             'noise.vert.glsl', 'noise.frag.glsl',
             `buffer_to_screen.vert.glsl`, `buffer_to_screen.frag.glsl`,
-            'terrain.vert.glsl', 'terrain.frag.glsl',
+            'terrain.vert.glsl', 'terrain.frag.glsl', 'glass.vert.glsl', 'glass.frag.glsl',
           ];
     }
 
@@ -160,7 +161,9 @@ export class ResourceManager{
         "pine.obj",
         "suzanne.obj",
         "bottle.obj",
-        "boat.obj"
+        "boat.obj",
+        "water.obj",
+      
       ];
     }
 

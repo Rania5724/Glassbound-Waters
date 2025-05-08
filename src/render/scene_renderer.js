@@ -7,6 +7,7 @@ import { MapMixerShaderRenderer } from "./shader_renderers/map_mixer_sr.js"
 import { TerrainShaderRenderer } from "./shader_renderers/terrain_sr.js"
 import { PreprocessingShaderRenderer } from "./shader_renderers/pre_processing_sr.js"
 import { ResourceManager } from "../scene_resources/resource_manager.js"
+import { GlassShaderRenderer } from "./shader_renderers/glass_sr.js"
 
 export class SceneRenderer {
 
@@ -31,10 +32,13 @@ export class SceneRenderer {
         this.mirror = new MirrorShaderRenderer(regl, resource_manager);
         this.shadows = new ShadowsShaderRenderer(regl, resource_manager);
         this.map_mixer = new MapMixerShaderRenderer(regl, resource_manager);
+        this.transparent = new GlassShaderRenderer(regl, resource_manager);
 
         // Create textures & buffer to save some intermediate renders into a texture
         this.create_texture_and_buffer("shadows", {}); 
         this.create_texture_and_buffer("base", {}); 
+        //this.create_texture_and_buffer("transparency", {});
+
     }
 
     /**
@@ -127,6 +131,9 @@ export class SceneRenderer {
                 this.terrain.render(scene_state);
                 this.blinn_phong.render(s_s);
             });
+
+            // Render transparent objects on top
+            this.transparent.render(scene_state);
             
         })
 
@@ -142,7 +149,13 @@ export class SceneRenderer {
 
             // Render the shadows
             this.shadows.render(scene_state);
+
         })
+
+        // Render the transparent objects and store the result in the transparency texture
+        /*this.render_in_texture("transparency", () => {
+            this.transparent.render(scene_state);
+        });*/
 
         /*---------------------------------------------------------------
             3. Compositing

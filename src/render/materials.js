@@ -59,6 +59,22 @@ class ReflectiveMaterial extends Material {
     }
 }
 
+class TransparentMaterial extends Material {
+    constructor({
+        color = [1.0, 1.0, 1.0],
+        opacity = 0.5,
+        shininess = 0.4,
+    } = {}) {
+        super();
+        this.color = color;
+        this.opacity = opacity;
+        this.shininess = shininess;
+
+        this.properties.push("transparent");
+        this.properties.push("no_blinn_phong");
+    }
+}
+
 class TerrainMaterial extends Material {
     constructor({
         water_color = [0.29, 0.51, 0.62],
@@ -81,6 +97,24 @@ class TerrainMaterial extends Material {
     }
 }
 
+class WaterMaterial extends Material {
+    constructor({
+        color = [0.0, 0.3, 0.5],
+        opacity = 0.6,
+        shininess = 60.0,
+    } = {}) {
+        super();
+        this.color = color;
+        this.opacity = opacity;
+        this.shininess = shininess;
+
+        this.properties.push("transparent");
+        this.properties.push("reflective");
+        this.properties.push("no_blinn_phong");
+    }
+}
+
+
 /*---------------------------------------------------------------
 	Material Instantiation
 ---------------------------------------------------------------*/
@@ -90,6 +124,10 @@ class TerrainMaterial extends Material {
  */
 export const sunset_sky = new BackgroundMaterial({
     texture: 'kloppenheim_07_puresky_blur.jpg'
+});
+
+export const beach_sunset = new BackgroundMaterial({
+    texture: 'panoramic-view-beach-sunset.jpg'
 });
 
 export const gray = new DiffuseMaterial({
@@ -114,4 +152,18 @@ export const terrain = new TerrainMaterial({
 });
 
 export const mirror = new ReflectiveMaterial();
+
+export const glass_material = new TransparentMaterial({
+    color: [1.0, 1.0, 1.0],  
+    opacity: 0.2,
+    //ior: 1.52,       
+});
+
+export const wood = new DiffuseMaterial({
+    texture: 'wood.png',
+    shininess: 14.0
+});
+
+export const water = new WaterMaterial();
+
 
