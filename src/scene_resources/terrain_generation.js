@@ -1,5 +1,7 @@
 
 import {vec2, vec3, vec4, mat2, mat3, mat4} from "../../lib/gl-matrix_3.3.0/esm/index.js"
+import { noise_functions } from "../render/shader_renderers/noise_sr.js";
+
 
 /**
  * Generate procedurally a terrain mesh using some procedural noise
@@ -82,4 +84,120 @@ export function terrain_build_mesh(height_map, WATER_LEVEL) {
 		faces: faces,
         vertex_tex_coords: []
 	}
+}
+
+export function generate_floating_sand_island(height_map) {
+	const grid_width = height_map.width;
+	const grid_height = height_map.height;
+
+	const vertices = [];
+	const normals = [];
+	const faces = [];
+	const tex_coords = [];
+
+	function xy_to_v_index(x, y) {
+		return x + y * grid_width;
+	}
+
+	// === Top Surface ===
+	for (let gy = 0; gy < grid_height; gy++) {
+		for (let gx = 0; gx < grid_width; gx++) {
+			const idx = xy_to_v_index(gx, gy);
+			const vx = gx / (grid_width - 1) - 0.5;
+			const vy = gy / (grid_height - 1) - 0.5;
+
+			const dx = gx - grid_width / 2;
+			const dy = gy - grid_height / 2;
+			const dist = Math.sqrt(dx * dx + dy * dy) / (0.5 * Math.min(grid_width, grid_height));
+
+			let elevation = (height_map.get(gx, gy) - 0.5) * 0.2;
+
+			// Flat horizontal stripe along Y axis
+			if (Math.abs(vy) < 0.098) {
+				elevation = 0.0;
+			} else {
+				elevation *= Math.max(0, 1.0 - dist * dist);
+			}
+			const vz = elevation;
+
+			vertices[idx] = [vx, vy, vz];
+
+			const dxh = (height_map.get(gx + 1, gy) - height_map.get(gx - 1, gy)) * 5.5;
+			const dyh = (height_map.get(gx, gy + 1) - height_map.get(gx, gy - 1)) * 5.5;
+			const normal = vec3.normalize([], [-dxh, -dyh, 1.0]);
+			normals[idx] = normal;
+
+			tex_coords[idx] = [gx / (grid_width - 1), gy / (grid_height - 1)];
+		}
+	}
+
+	for (let gy = 0; gy < grid_height - 1; gy++) {
+		for (let gx = 0; gx < grid_width - 1; gx++) {
+			const a = xy_to_v_index(gx, gy);
+			const b = xy_to_v_index(gx + 1, gy);
+			const c = xy_to_v_index(gx, gy + 1);
+			const d = xy_to_v_index(gx + 1, gy + 1);
+
+			faces.push([a, b, c]);
+			faces.push([b, d, c]);
+		}
+	}
+
+	const top_vertex_count = vertices.length;
+
+	// === Bottom Vertices ===
+	for (let i = 0; i < top_vertex_count; i++) {
+		const [x, y, z] = vertices[i];
+		const bottom_z = -0.009; // make it thin and floating
+		vertices.push([x, y, bottom_z]);
+		normals.push([0, 0, -1]);
+		tex_coords.push(tex_coords[i]);
+	}
+
+	// === Bottom Faces ===
+	const top_faces_copy = faces.slice();
+	for (let [a, b, c] of top_faces_copy) {
+		faces.push([
+			c + top_vertex_count,
+			b + top_vertex_count,
+			a + top_vertex_count
+		]);
+	}
+
+	// === Side Walls ===
+	function add_side(a, b) {
+		const a_bottom = a + top_vertex_count;
+		const b_bottom = b + top_vertex_count;
+
+		faces.push([a, b, b_bottom]);
+		faces.push([a, b_bottom, a_bottom]);
+	}
+
+	const edge_indices = [];
+
+	// Edges on the outer border
+	for (let x = 0; x < grid_width - 1; x++) {
+		edge_indices.push([xy_to_v_index(x, 0), xy_to_v_index(x + 1, 0)]);
+		edge_indices.push([xy_to_v_index(x, grid_height - 1), xy_to_v_index(x + 1, grid_height - 1)]);
+	}
+	for (let y = 0; y < grid_height - 1; y++) {
+		edge_indices.push([xy_to_v_index(0, y), xy_to_v_index(0, y + 1)]);
+		edge_indices.push([xy_to_v_index(grid_width - 1, y), xy_to_v_index(grid_width - 1, y + 1)]);
+	}
+
+	for (let [a, b] of edge_indices) {
+		add_side(a, b);
+	}
+
+	console.log("Mesh stats:", {
+		vertices: vertices.length,
+		faces: faces.length
+	});
+
+	return {
+		vertex_positions: vertices,
+		vertex_normals: normals,
+		faces: faces,
+		vertex_tex_coords: tex_coords
+	};
 }

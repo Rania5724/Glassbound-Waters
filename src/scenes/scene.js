@@ -27,6 +27,7 @@ export class Scene {
 
     // Point lights
     this.lights = [];
+
   }
 
   /**

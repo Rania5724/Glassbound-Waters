@@ -67,4 +67,5 @@ void main()
 	// Compute pixel color
     vec3 color = ambient + (light_color * (diffuse + specular));
 	gl_FragColor = vec4(color, 1.); // output: RGBA in 0..1 range
+	
 }

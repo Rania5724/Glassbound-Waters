@@ -6,7 +6,7 @@ export class GlassShaderRenderer extends ShaderRenderer {
         super(
             regl,
             resource_manager,
-            `glass.vert.glsl`,
+            `mirror.vert.glsl`,
             `glass.frag.glsl`
         );
     }
@@ -17,7 +17,7 @@ export class GlassShaderRenderer extends ShaderRenderer {
     render(scene_state) {
         const scene = scene_state.scene;
         const inputs = [];
-
+        
         for (const obj of scene.objects) {
             if (this.exclude_object(obj)) continue;
 
@@ -29,9 +29,6 @@ export class GlassShaderRenderer extends ShaderRenderer {
                 mat_normals_model_view,
             } = scene.camera.object_matrices.get(obj); 
 
-            console.log("Glass Color:", obj.material.color);
-            console.log("Opacity:", obj.material.opacity);
-            console.log("Combined glass_color:", [...obj.material.color, obj.material.opacity]);
 
             inputs.push({
                 mesh: mesh,
@@ -39,8 +36,9 @@ export class GlassShaderRenderer extends ShaderRenderer {
                 mat_model_view: mat_model_view,
                 mat_normals_model_view: mat_normals_model_view,
                 glass_color: [...obj.material.color, obj.material.opacity],
+                u_ior: obj.material.ior,
             });
-                        }
+        }
 
         this.pipeline(inputs);
     }
@@ -52,13 +50,35 @@ export class GlassShaderRenderer extends ShaderRenderer {
         return !obj.material.properties.includes("transparent");
     }
 
+    compute_cube_map(scene_state, obj, render_scene_function){
+        // Remove the objects from which we render the cube map from the scene_objects, 
+        const index = scene_state.scene.objects.indexOf(obj);
+        if (index !== -1) {
+            scene_state.scene.objects.splice(index, 1);
+        }
+
+        // Computation of the cube map
+        this.env_capture.capture_scene_cubemap(
+            scene_state, 
+            obj.translation, 
+            render_scene_function,
+            scene_state.background_color
+        );
+
+        // Place back the object
+        scene_state.scene.objects.push(obj);
+
+        return this.env_capture.env_cubemap;
+    }
+
+
     /**
      * Sets WebGL depth and blending options for transparent objects.
-     */
+     **/
     depth() {
         return {
             enable: true,
-            mask: false,  // Prevents writing to the depth buffer
+            mask: false, 
             func: "<=",
         };
     }
@@ -71,7 +91,6 @@ export class GlassShaderRenderer extends ShaderRenderer {
                 srcAlpha: "one",
                 dstRGB: "one minus src alpha",
                 dstAlpha: "one minus dst alpha",
-             
             },
         };
     }
@@ -85,7 +104,7 @@ export class GlassShaderRenderer extends ShaderRenderer {
             mat_model_view: regl.prop("mat_model_view"),
             mat_normals_model_view: regl.prop("mat_normals_model_view"),
             u_glassColor: regl.prop("glass_color"),
-
+            u_ior: regl.prop("u_ior"),
         };
     }
     

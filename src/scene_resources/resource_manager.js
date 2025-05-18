@@ -2,6 +2,9 @@ import { cg_mesh_make_uv_sphere, cg_mesh_load_obj_into_regl, mesh_upload_to_buff
 import { load_image, load_text, load_texture } from "../cg_libraries/cg_web.js"
 import { vec3, vec4, mat3, mat4 } from "../../lib/gl-matrix_3.3.0/esm/index.js"
 import { ProceduralTextureGenerator } from "../render/procedural_texture_generator.js";
+import { cg_mesh_make_plane } from "../cg_libraries/cg_mesh.js";
+
+
 
 export class ResourceManager{
 
@@ -16,6 +19,7 @@ export class ResourceManager{
     constructor(regl){
         this.regl = regl;
         this.resources = null;
+
     }
 
     /**
@@ -61,8 +65,10 @@ export class ResourceManager{
 
         // Textures which are not loaded from files but created in code
         generate_textures(regl, resources);
+        this.resources = resources; // Set resources before adding procedural mesh
+        this.generator = new ProceduralTextureGenerator(regl, this);
 
-        this.resources = resources;
+        this.add_procedural_mesh("fullscreen_quad", this.generator.create_mesh_quad());
         return this;
     }
 
@@ -138,6 +144,7 @@ export class ResourceManager{
             'kloppenheim_07_puresky_blur.jpg',
             'pine.png',
             'wood.png',
+            'sand.png',
           ];
     }
 
@@ -152,7 +159,12 @@ export class ResourceManager{
             'cubemap_visualization.vert.glsl', 'cubemap_visualization.frag.glsl',
             'noise.vert.glsl', 'noise.frag.glsl',
             `buffer_to_screen.vert.glsl`, `buffer_to_screen.frag.glsl`,
-            'terrain.vert.glsl', 'terrain.frag.glsl', 'glass.vert.glsl', 'glass.frag.glsl',
+            'terrain.vert.glsl', 'terrain.frag.glsl', 'glass.frag.glsl', 
+            'basic.vert.glsl', 'position.frag.glsl', 'mask.frag.glsl',
+            'base.vert.glsl', 'ssr.frag.glsl','normal.frag.glsl',
+            'reflection.frag.glsl','specular.frag.glsl',
+            'reflection_color.frag.glsl', 
+            'box_blur.frag.glsl', 'base_combine.frag.glsl', 'bloom.frag.glsl',
           ];
     }
 
@@ -163,6 +175,9 @@ export class ResourceManager{
         "bottle.obj",
         "boat.obj",
         "water.obj",
+        "bottle2.obj",
+        "boat2.obj",
+        "water2.obj",
       
       ];
     }
@@ -189,7 +204,8 @@ function generate_textures(regl, resources) {
         colorType: 'uint8',
       })
     }
-  
+
+    
     resources['tex_red'] = make_texture_from_color([0.7, 0.15, 0.05])
     resources['tex_gold'] = make_texture_from_color([0.7, 0.5, 0.0])
     resources['tex_blue'] = make_texture_from_color([0.1, 0.5, 0.7])
@@ -202,5 +218,4 @@ function generate_textures(regl, resources) {
     resources['tex_terrain'] = make_texture_from_color([1.0, 0.0, 0.0])
   
   }
-  
 

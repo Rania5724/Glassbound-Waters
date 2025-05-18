@@ -1,7 +1,9 @@
-
 const default_texture = null; 
 const default_base_color = [1.0, 0.0, 1.0];  // magenta, used when no texture is provided
-const default_shininess = 0.1;
+const default_shininess = 8.0;
+const default_specular = [0.2, 0.2, 0.2];
+const default_opacity = 1.0;
+const default_ior = 1.5; // index of refraction for glass
 
 
 /*---------------------------------------------------------------
@@ -23,16 +25,25 @@ class Material {
         this.texture = default_texture;
         this.color = default_base_color;
         this.shininess = default_shininess;
+        this.specular = default_specular;
+        this.opacity = default_opacity;
+        this.ior = default_ior;
+        this.isReflective = false;
         this.properties = [];
     }
-
 }
 
 class BackgroundMaterial extends Material {
 
-    constructor({texture = default_texture}){
+    constructor({
+        texture = default_texture,
+        shininess = 0.0,
+        specular = [0.0, 0.0, 0.0],
+    }){
         super()
         this.texture = texture;
+        this.shininess = shininess;
+        this.specular = specular;
         this.properties.push("environment");
         this.properties.push("no_blinn_phong");
     }
@@ -43,35 +54,55 @@ class DiffuseMaterial extends Material {
     constructor({
         texture = null, 
         color = default_base_color, 
-        shininess = default_shininess
+        shininess = 4.0,
+        specular = [0.05, 0.05, 0.05],
     }){
         super()
         this.texture = texture;
         this.color = color;
         this.shininess = shininess;
+        this.texture = texture;
+        this.specular = specular;
     }
 }
 
 class ReflectiveMaterial extends Material {
-    constructor(){
+    constructor({
+        shininess = 127.0,
+        specular = [0.9, 0.9, 0.9],
+        isReflective = true,
+        color = [0.8, 0.8, 0.8],
+    } = {}){
         super()
+        this.shininess = shininess;
+        this.specular = specular;
+        this.isReflective = isReflective;
+        this.color = color;
         this.properties.push("reflective");
     }
 }
 
 class TransparentMaterial extends Material {
     constructor({
-        color = [1.0, 1.0, 1.0],
-        opacity = 0.5,
-        shininess = 0.4,
+        opacity = 0.2,
+        shininess = 40,
+        specular = [0.8, 0.9, 1.0],
+        texture = null,
+        color = [0.6, 0.8, 1.0],
+        isReflective=true,
+     
     } = {}) {
         super();
         this.color = color;
         this.opacity = opacity;
         this.shininess = shininess;
+        this.texture = texture;
+        this.specular = specular;
+        this.isReflective = isReflective;
 
         this.properties.push("transparent");
         this.properties.push("no_blinn_phong");
+
     }
 }
 
@@ -93,24 +124,41 @@ class TerrainMaterial extends Material {
         this.peak_shininess = peak_shininess;
 
         this.properties.push("terrain");
-        this.properties.push("no_blinn_phong");
     }
 }
 
+class BeachTerrainMaterial extends Material {
+    constructor({
+        color = [0.9, 0.8, 0.6], 
+        texture = "sand.png",
+        shininess =  8.0,
+        specular = [0.05, 0.05, 0.05],
+    } = {}) {
+        super();
+        this.color = color;
+        this.shininess = shininess;
+        this.specular = specular;
+        this.texture = texture;
+    }
+}
+
+
 class WaterMaterial extends Material {
     constructor({
-        color = [0.0, 0.3, 0.5],
-        opacity = 0.6,
-        shininess = 60.0,
+        color = [0.0, 0.3, 0.5], 
+        opacity = 0.3,
+        shininess = 60.0, 
+        specular = [0.5, 0.6, 0.7],
+        isReflective = true,
     } = {}) {
         super();
         this.color = color;
         this.opacity = opacity;
         this.shininess = shininess;
+        this.specular = specular;
+        this.isReflective = isReflective;
 
         this.properties.push("transparent");
-        this.properties.push("reflective");
-        this.properties.push("no_blinn_phong");
     }
 }
 
@@ -154,16 +202,25 @@ export const terrain = new TerrainMaterial({
 export const mirror = new ReflectiveMaterial();
 
 export const glass_material = new TransparentMaterial({
-    color: [1.0, 1.0, 1.0],  
+    color: [0.6, 0.8, 1.0], 
     opacity: 0.2,
-    //ior: 1.52,       
+    ior: 1.4,
 });
 
-export const wood = new DiffuseMaterial({
-    texture: 'wood.png',
-    shininess: 14.0
+export const boat_material = new DiffuseMaterial({
+    shininess: 14.0,
+    color: [0.6, 0.4, 0.2]
 });
 
 export const water = new WaterMaterial();
+
+export const bottle = new WaterMaterial({
+    color: [0.6, 0.8, 1.0], 
+    opacity: 0.2,
+    shininess: 20, // Reduced shininess
+    specular: [0.4, 0.5, 0.6] // Adjusted specular values
+});
+
+export const sand =  new BeachTerrainMaterial();
 
 

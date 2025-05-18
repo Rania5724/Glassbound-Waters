@@ -37,7 +37,6 @@ void main()
 
     // Compute specular
     float specular = (diffuse > 0.0) ? pow(h_dot_n, material_shininess) : 0.0;
-
     // Compute ambient
     vec3 ambient = ambient_factor * material_color * material_ambient;
 

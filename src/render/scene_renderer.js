@@ -1,4 +1,3 @@
-
 import { BlinnPhongShaderRenderer } from "./shader_renderers/blinn_phong_sr.js"
 import { FlatColorShaderRenderer } from "./shader_renderers/flat_color_sr.js"
 import { MirrorShaderRenderer } from "./shader_renderers/mirror_sr.js"
@@ -8,6 +7,19 @@ import { TerrainShaderRenderer } from "./shader_renderers/terrain_sr.js"
 import { PreprocessingShaderRenderer } from "./shader_renderers/pre_processing_sr.js"
 import { ResourceManager } from "../scene_resources/resource_manager.js"
 import { GlassShaderRenderer } from "./shader_renderers/glass_sr.js"
+import {MaskShaderRenderer} from "./shader_renderers/mask_sr.js"
+import { NormalShaderRenderer } from "./shader_renderers/normal_sr.js"
+import {PositionShaderRenderer} from "./shader_renderers/position_sr.js"
+import { SSRShaderRenderer } from "./shader_renderers/ssr_sr.js"
+import { SpecularShaderRenderer } from "./shader_renderers/specular_sr.js"
+import { ColorShaderRenderer } from "./shader_renderers/color_sr.js"
+import { ReflectionColorShaderRenderer } from "./shader_renderers/reflection_color_sr.js"
+import { ProceduralTextureGenerator } from "./procedural_texture_generator.js"
+import { BoxBlurShaderRenderer } from "./shader_renderers/box_blur_sr.js"
+import { ReflectionShaderRenderer } from "./shader_renderers/reflection_sr.js"
+import { BaseCombineShaderRenderer } from "./shader_renderers/base_combine_sr.js"
+import { BloomShaderRenderer } from "./shader_renderers/bloom_sr.js"
+
 
 export class SceneRenderer {
 
@@ -19,6 +31,8 @@ export class SceneRenderer {
     constructor(regl, resource_manager) {
         this.regl = regl;
         this.resource_manager = resource_manager;
+        this.quad_mesh = this.resource_manager.get_mesh("fullscreen_quad"); 
+
 
         this.textures_and_buffers = {};
 
@@ -34,10 +48,38 @@ export class SceneRenderer {
         this.map_mixer = new MapMixerShaderRenderer(regl, resource_manager);
         this.transparent = new GlassShaderRenderer(regl, resource_manager);
 
+        this.mask = new MaskShaderRenderer(regl, resource_manager);
+        this.normal = new NormalShaderRenderer(regl, resource_manager);
+        this.position = new PositionShaderRenderer(regl, resource_manager);
+        this.ssr = new SSRShaderRenderer(regl, resource_manager);
+
+        this.specular = new SpecularShaderRenderer(regl, resource_manager);
+        this.color = new ColorShaderRenderer(regl, resource_manager);
+        this.reflection_color = new ReflectionColorShaderRenderer(regl, resource_manager);
+        this.reflection = new ReflectionShaderRenderer(regl, resource_manager);
+        this.base_combine = new BaseCombineShaderRenderer(regl, resource_manager);
+        this.bloom = new BloomShaderRenderer(regl, resource_manager);
+
+
+        this.generator = new ProceduralTextureGenerator(regl, resource_manager);
+        this.box_blur = new BoxBlurShaderRenderer(regl, resource_manager);
+
         // Create textures & buffer to save some intermediate renders into a texture
         this.create_texture_and_buffer("shadows", {}); 
         this.create_texture_and_buffer("base", {}); 
-        //this.create_texture_and_buffer("transparency", {});
+        this.create_texture_and_buffer("transparency", {});
+
+        this.create_texture_and_buffer("position", {});
+        this.create_texture_and_buffer("mask", {});
+        this.create_texture_and_buffer("normal", {});
+        this.create_texture_and_buffer("ssr", {});
+        this.create_texture_and_buffer("specular", {});
+        this.create_texture_and_buffer("reflection_color", {});
+        this.create_texture_and_buffer("color", {});
+        this.create_texture_and_buffer("box_blur", {});
+        this.create_texture_and_buffer("reflection", {});
+        this.create_texture_and_buffer("final_color", { });
+       
 
     }
 
@@ -50,6 +92,10 @@ export class SceneRenderer {
         const regl = this.regl;
         const framebuffer_width = window.innerWidth;
         const framebuffer_height = window.innerHeight;
+
+        // Log texture creation details
+        console.log(`Creating texture: ${name}`);
+        console.log(`Format: ${format}, Type: ${type}, Dimensions: ${framebuffer_width}x${framebuffer_height}`);
 
         // Create a regl texture and a regl buffer linked to the regl texture
         const text = regl.texture({ width: framebuffer_width, height: framebuffer_height, wrap: wrap, format: format, type: type })
@@ -131,9 +177,6 @@ export class SceneRenderer {
                 this.terrain.render(scene_state);
                 this.blinn_phong.render(s_s);
             });
-
-            // Render transparent objects on top
-            this.transparent.render(scene_state);
             
         })
 
@@ -152,20 +195,69 @@ export class SceneRenderer {
 
         })
 
-        // Render the transparent objects and store the result in the transparency texture
-        /*this.render_in_texture("transparency", () => {
-            this.transparent.render(scene_state);
-        });*/
-
         /*---------------------------------------------------------------
             3. Compositing
         ---------------------------------------------------------------*/
+        this.render_in_texture("transparency", () => {
+            this.transparent.render(scene_state);
+        });
 
-        // Mix the base color of the scene with the shadows information to create the final result
-        this.map_mixer.render(scene_state, this.texture("shadows"), this.texture("base"));
+        this.render_in_texture("position", () => {
+            this.position.render(scene_state);
+        });
 
+        this.render_in_texture("mask", () => {
+            this.mask.render(scene_state);
+        });
+
+        this.render_in_texture("normal", () => {
+            this.normal.render(scene_state);
+        });
+
+        this.render_in_texture("color", () => {
+            this.color.render(scene_state);
+        });
+
+        this.render_in_texture("ssr", () => {
+            this.ssr.render(scene_state, this.texture("position"), this.texture("normal"), this.texture("mask"), scene_state.scene.ssr_enabled);
+        });
+
+        this.render_in_texture("specular", () => {
+            this.specular.render(scene_state);
+        });
+
+
+        this.render_in_texture("reflection_color", () => {
+            this.reflection_color.render(this.texture("ssr"), this.texture("color"));
+        });
+
+        this.render_in_texture("box_blur", () => {
+            this.box_blur.render(this.texture("ssr"));
+        });
+
+        this.render_in_texture("reflection", () => {
+            this.reflection.render(this.texture("reflection_color"), this.texture("box_blur"), this.texture("mask"));
+        });
+
+        this.render_in_texture("final_color", () => {
+            this.base_combine.render(
+            this.texture("base"), 
+            this.texture("reflection"), 
+            this.texture("specular"));
+        });
+        
         // Visualize cubemap
-        // this.mirror.env_capture.visualize();
+        //this.mirror.env_capture.visualize();
+
+
+        //With Bloom and SSR (kinda), disbale no blinn-phong property in transparency otherwise it's black
+        //this.bloom.render(this.texture("final_color"), scene_state.scene.bloom_enabled);
+
+
+        // Visualise transparent bottle:
+        this.flat_color.render(scene_state);
+        this.blinn_phong.render(scene_state);
+        this.transparent.render(scene_state);
 
     }
 }

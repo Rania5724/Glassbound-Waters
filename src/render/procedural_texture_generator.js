@@ -18,7 +18,7 @@ export class ProceduralTextureGenerator {
         this.resource_manager = resource_manager;
 
         // A simple square mesh used to draw texture on it
-        this.mesh_quad_2d = this.create_mesh_quad();   
+        this.mesh_quad_2d = this.create_mesh_quad2();   
         // A noise buffer used to store the content that needs to be displayed on screen
         this.noise_buffer = this.new_buffer();
 
@@ -117,6 +117,40 @@ export class ProceduralTextureGenerator {
         return {
             vertex_positions: [
                 // 4 vertices with 2 coordinates each
+                [-1, -1,0],
+                [1, -1,0],
+                [1, 1,0],
+                [-1, 1,0],
+            ],
+            faces: [
+                [0, 1, 2], // top right
+                [0, 2, 3], // bottom left
+            ],
+            //// I added this to the mesh
+            vertex_tex_coords: [
+                [0, 0],  // bottom left
+                [1, 0],  // bottom right
+                [0, 1],  // top left
+                [1, 1],  // top right
+            ],
+            vertex_normals : [
+                [0, 0, 1], // bottom left
+                [0, 0, 1], // bottom right
+                [0, 0, 1], // top right
+                [0, 0, 1], // top left
+            ],
+
+        };
+    }
+
+     /**
+     * Create the simple square mesh on which the texture is displayed
+     * @returns 
+     */
+    create_mesh_quad2(){
+        return {
+            vertex_positions: [
+                // 4 vertices with 2 coordinates each
                 [-1, -1],
                 [1, -1],
                 [1, 1],
@@ -126,6 +160,7 @@ export class ProceduralTextureGenerator {
                 [0, 1, 2], // top right
                 [0, 2, 3], // bottom left
             ],
+
         };
     }
 
