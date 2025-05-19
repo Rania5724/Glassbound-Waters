@@ -19,6 +19,8 @@ import { BoxBlurShaderRenderer } from "./shader_renderers/box_blur_sr.js"
 import { ReflectionShaderRenderer } from "./shader_renderers/reflection_sr.js"
 import { BaseCombineShaderRenderer } from "./shader_renderers/base_combine_sr.js"
 import { BloomShaderRenderer } from "./shader_renderers/bloom_sr.js"
+import { BloomBlurShaderRenderer } from "./shader_renderers/bloom_sr.js"
+import { BloomExtractShaderRenderer } from "./shader_renderers/bloom_sr.js"
 
 
 export class SceneRenderer {
@@ -59,26 +61,18 @@ export class SceneRenderer {
         this.reflection = new ReflectionShaderRenderer(regl, resource_manager);
         this.base_combine = new BaseCombineShaderRenderer(regl, resource_manager);
         this.bloom = new BloomShaderRenderer(regl, resource_manager);
+        this.bloom_blur = new BloomBlurShaderRenderer(regl, resource_manager);
+        this.bloom_extract = new BloomExtractShaderRenderer(regl, resource_manager);
 
 
         this.generator = new ProceduralTextureGenerator(regl, resource_manager);
         this.box_blur = new BoxBlurShaderRenderer(regl, resource_manager);
 
         // Create textures & buffer to save some intermediate renders into a texture
-        this.create_texture_and_buffer("shadows", {}); 
-        this.create_texture_and_buffer("base", {}); 
-        this.create_texture_and_buffer("transparency", {});
-
-        this.create_texture_and_buffer("position", {});
-        this.create_texture_and_buffer("mask", {});
-        this.create_texture_and_buffer("normal", {});
-        this.create_texture_and_buffer("ssr", {});
-        this.create_texture_and_buffer("specular", {});
-        this.create_texture_and_buffer("reflection_color", {});
-        this.create_texture_and_buffer("color", {});
-        this.create_texture_and_buffer("box_blur", {});
-        this.create_texture_and_buffer("reflection", {});
-        this.create_texture_and_buffer("final_color", { });
+        const names = ["shadows", "base", "transparency", "position", "mask", "normal", "ssr", 
+            "specular", "reflection_color", "color", "box_blur", "reflection", "final_color", 
+            "bloom_extract", "bloom_blur_0", "bloom_blur_1"];
+        names.forEach(name => this.create_texture_and_buffer(name, {}));
        
 
     }
@@ -92,10 +86,6 @@ export class SceneRenderer {
         const regl = this.regl;
         const framebuffer_width = window.innerWidth;
         const framebuffer_height = window.innerHeight;
-
-        // Log texture creation details
-        console.log(`Creating texture: ${name}`);
-        console.log(`Format: ${format}, Type: ${type}, Dimensions: ${framebuffer_width}x${framebuffer_height}`);
 
         // Create a regl texture and a regl buffer linked to the regl texture
         const text = regl.texture({ width: framebuffer_width, height: framebuffer_height, wrap: wrap, format: format, type: type })
@@ -141,7 +131,7 @@ export class SceneRenderer {
         const frame = scene_state.frame;
 
         /*---------------------------------------------------------------
-            0. Camera Setup
+             Camera Setup
         ---------------------------------------------------------------*/
 
         // Update the camera ratio in case the windows size changed
@@ -152,7 +142,7 @@ export class SceneRenderer {
         scene.camera.compute_objects_transformation_matrices(scene.objects);
 
         /*---------------------------------------------------------------
-            1. Base Render Passes
+             Base Render Passes
         ---------------------------------------------------------------*/
 
         // Render call: the result will be stored in the texture "base"
@@ -181,7 +171,7 @@ export class SceneRenderer {
         })
 
         /*---------------------------------------------------------------
-            2. Shadows Render Pass
+             Shadows Render Pass
         ---------------------------------------------------------------*/
         
         // Render the shadows of the scene in a black & white texture. White means shadow.
@@ -192,15 +182,18 @@ export class SceneRenderer {
 
             // Render the shadows
             this.shadows.render(scene_state);
-
         })
 
         /*---------------------------------------------------------------
-            3. Compositing
+             Transparency Render Pass
         ---------------------------------------------------------------*/
         this.render_in_texture("transparency", () => {
             this.transparent.render(scene_state);
         });
+
+        /*---------------------------------------------------------------
+                Post-processing Render Pass
+        ---------------------------------------------------------------*/
 
         this.render_in_texture("position", () => {
             this.position.render(scene_state);
@@ -226,7 +219,6 @@ export class SceneRenderer {
             this.specular.render(scene_state);
         });
 
-
         this.render_in_texture("reflection_color", () => {
             this.reflection_color.render(this.texture("ssr"), this.texture("color"));
         });
@@ -239,28 +231,102 @@ export class SceneRenderer {
             this.reflection.render(this.texture("reflection_color"), this.texture("box_blur"), this.texture("mask"));
         });
 
+        /*---------------------------------------------------------------
+            Compositing
+        ---------------------------------------------------------------*/
+
         this.render_in_texture("final_color", () => {
             this.base_combine.render(
             this.texture("base"), 
             this.texture("reflection"), 
             this.texture("specular"));
         });
+
+        /*---------------------------------------------------------------
+            Bloom
+        ---------------------------------------------------------------*/
+
+        this.render_in_texture("bloom_extract", () => {
+            this.bloom_extract.render(this.texture("final_color"), scene_state.scene.bloom_threshold);}
+        );
+
+        this.render_in_texture("bloom_blur_0", () => {
+            this.bloom_blur.render(this.texture("bloom_extract"), 0);
+        });
+
+        this.render_in_texture("bloom_blur_1", () => {
+            this.bloom_blur.render(this.texture("bloom_blur_0"), 1);
+        });
+
+
+
         
         // Visualize cubemap
         //this.mirror.env_capture.visualize();
 
+        /*this.map_mixer.render(
+            scene_state, 
+            this.texture("shadows"), 
+            this.texture("base"), 
+        );*/
+
 
         //With Bloom and SSR (kinda), disbale no blinn-phong property in transparency otherwise it's black
-        //this.bloom.render(this.texture("final_color"), scene_state.scene.bloom_enabled);
+
+        //this.position.render(scene_state);
+        //this.mask.render(scene_state);
+        //this.normal.render(scene_state);
+        //this.color.render(scene_state);
+        //this.ssr.render(scene_state, this.texture("position"), this.texture("normal"), this.texture("mask"), scene_state.scene.ssr_enabled);
+
+
+        ///this.specular.render(scene_state);
+        //this.reflection_color.render(this.texture("ssr"), this.texture("color"));
+        //this.box_blur.render(this.texture("ssr"));
+        //this.reflection.render(this.texture("reflection_color"), this.texture("box_blur"), this.texture("mask"));
+        /*this.base_combine.render(
+            this.texture("base"), 
+            this.texture("reflection"), 
+            this.texture("specular"));*/
+        //this.bloom_extract.render(this.texture("final_color"), scene_state.scene.bloom_threshold);
+        //this.bloom_blur.render(this.texture("bloom_extract"), 0);
+        //this.bloom_blur.render(this.texture("bloom_blur_0"), 1);
+        const blurred_tex = this.render_bloom_passes(10);
+        this.bloom.render(this.texture("final_color"),  scene_state.scene.bloom_enabled, blurred_tex, scene_state.scene.bloom_intensity);
+
+
+
+
+
+
 
 
         // Visualise transparent bottle:
-        this.flat_color.render(scene_state);
+        /*this.flat_color.render(scene_state);
         this.blinn_phong.render(scene_state);
-        this.transparent.render(scene_state);
+        this.transparent.render(scene_state);*/
 
     }
+
+    render_bloom_passes(passes) {
+        let horizontal = true;
+        let read_texture = this.textures_and_buffers["bloom_extract"][0];
+
+        for (let i = 0; i < passes; i++) {
+            const write_name = horizontal ? "bloom_blur_0" : "bloom_blur_1";
+            this.render_in_texture(write_name, () => {
+                this.bloom_blur.render(read_texture, horizontal ? 0 : 1);
+            });
+            read_texture = this.textures_and_buffers[write_name][0];
+            horizontal = !horizontal;
+        }
+        return read_texture;
+    }
+
+
 }
+
+
 
 
 

@@ -66,9 +66,8 @@ export class ResourceManager{
         // Textures which are not loaded from files but created in code
         generate_textures(regl, resources);
         this.resources = resources; // Set resources before adding procedural mesh
-        this.generator = new ProceduralTextureGenerator(regl, this);
 
-        this.add_procedural_mesh("fullscreen_quad", this.generator.create_mesh_quad());
+        this.add_procedural_mesh("fullscreen_quad", cg_mesh_make_plane());
         return this;
     }
 
@@ -144,7 +143,6 @@ export class ResourceManager{
             'kloppenheim_07_puresky_blur.jpg',
             'pine.png',
             'wood.png',
-            'sand.png',
           ];
     }
 
@@ -164,7 +162,9 @@ export class ResourceManager{
             'base.vert.glsl', 'ssr.frag.glsl','normal.frag.glsl',
             'reflection.frag.glsl','specular.frag.glsl',
             'reflection_color.frag.glsl', 
-            'box_blur.frag.glsl', 'base_combine.frag.glsl', 'bloom.frag.glsl',
+            'box_blur.frag.glsl', 'base_combine.frag.glsl',
+            'bloom_combine.frag.glsl', 'bloom_extract.frag.glsl',
+            'bloom_blur.frag.glsl', 
           ];
     }
 
@@ -172,9 +172,6 @@ export class ResourceManager{
         return [
         "pine.obj",
         "suzanne.obj",
-        "bottle.obj",
-        "boat.obj",
-        "water.obj",
         "bottle2.obj",
         "boat2.obj",
         "water2.obj",

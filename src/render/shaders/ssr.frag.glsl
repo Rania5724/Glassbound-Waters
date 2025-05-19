@@ -15,7 +15,7 @@ void main() {
     const float maxDistance = 0.2; //4.0
     const float resolution  = 0.1; //0.5
     const float thickness   = 0.2; //(0.1)
-    const int MAX_STEPS     = 64; // 
+    const int MAX_STEPS     = 32; 
     vec2 texSize = u_texSize;
     vec2 texCoord = v_texCoord;
 

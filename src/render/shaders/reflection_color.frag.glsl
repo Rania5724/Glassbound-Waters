@@ -7,12 +7,11 @@ uniform vec2 u_texSize;
 varying vec2 v_texCoord;
 
 void main() {
-   // gl_FragColor = vec4(1.0, 0.0, 0, 1.0);
     int size = 6;
     float separation = 2.0;
 
     vec2 texSize = u_texSize;
-    vec2 texCoord = gl_FragCoord.xy / texSize;
+    vec2 texCoord = v_texCoord;
 
     vec4 uv = texture2D(uvTexture, texCoord);
 

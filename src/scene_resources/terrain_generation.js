@@ -85,6 +85,11 @@ export function terrain_build_mesh(height_map, WATER_LEVEL) {
         vertex_tex_coords: []
 	}
 }
+/**
+ * Generate a floating island using a height map
+ * @param {*} height_map : a buffer texture that contains heigth values
+ * @returns
+ */
 
 export function generate_floating_sand_island(height_map) {
 	const grid_width = height_map.width;
@@ -200,4 +205,76 @@ export function generate_floating_sand_island(height_map) {
 		faces: faces,
 		vertex_tex_coords: tex_coords
 	};
+}
+
+/**
+ * Generate a wavy sea mesh from a heightmap
+ * @param {*} height_map : a buffer texture that contains heigth values
+ * @param {*} amplitude : the amplitude of the waves
+ * @returns
+ */
+
+export function generate_wavy_sea_mesh_from_heightmap(height_map, amplitude = 0.03) {
+  const grid_width = height_map.width;
+  const grid_height = height_map.height;
+
+  const vertices = [];
+  const normals = [];
+  const faces = [];
+  const tex_coords = [];
+
+  function xy_to_v_index(x, y) {
+    return x + y * grid_width;
+  }
+
+  for (let gy = 0; gy < grid_height; gy++) {
+    for (let gx = 0; gx < grid_width; gx++) {
+      const idx = xy_to_v_index(gx, gy);
+
+      // Map x,y to -0.5 ... 0.5 range
+      const x = gx / (grid_width - 1) - 0.5;
+      const y = gy / (grid_height - 1) - 0.5;
+
+      // Get noise-based height (FBM noise returns roughly [0,1] range)
+      let noise_val = height_map.get(gx, gy);
+
+      // Center it around zero and scale by amplitude
+      const z = (noise_val - 0.5) * amplitude;
+
+      vertices[idx] = [x, y, z];
+
+      // Calculate normals using finite difference approximation
+      const left = height_map.get(Math.max(gx - 1, 0), gy);
+      const right = height_map.get(Math.min(gx + 1, grid_width - 1), gy);
+      const down = height_map.get(gx, Math.max(gy - 1, 0));
+      const up = height_map.get(gx, Math.min(gy + 1, grid_height - 1));
+
+      const dx = (right - left) * amplitude;
+      const dy = (up - down) * amplitude;
+
+      const normal = vec3.normalize([], [-dx, -dy, 1]);
+      normals[idx] = normal;
+
+      tex_coords[idx] = [gx / (grid_width - 1), gy / (grid_height - 1)];
+    }
+  }
+
+  for (let gy = 0; gy < grid_height - 1; gy++) {
+    for (let gx = 0; gx < grid_width - 1; gx++) {
+      const a = xy_to_v_index(gx, gy);
+      const b = xy_to_v_index(gx + 1, gy);
+      const c = xy_to_v_index(gx, gy + 1);
+      const d = xy_to_v_index(gx + 1, gy + 1);
+
+      faces.push([a, b, c]);
+      faces.push([b, d, c]);
+    }
+  }
+
+  return {
+    vertex_positions: vertices,
+    vertex_normals: normals,
+    faces: faces,
+    vertex_tex_coords: tex_coords
+  };
 }

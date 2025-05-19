@@ -34,7 +34,6 @@ export class ReflectionShaderRenderer extends ShaderRenderer {
         inputs.push({
             mesh: mesh,
             mat_model_view_projection: identity,
-            u_texSize: [colorTexture.width, colorTexture.height],
             colorTexture: colorTexture,
             colorBlurTexture: colorBlurTexture,
             maskTexture: maskTexture,
@@ -48,7 +47,6 @@ export class ReflectionShaderRenderer extends ShaderRenderer {
             colorTexture: regl.prop('colorTexture'),
             colorBlurTexture: regl.prop('colorBlurTexture'),
             maskTexture: regl.prop('maskTexture'),
-            u_texSize: regl.prop('u_texSize'),
         };
     }
 

@@ -4,11 +4,13 @@ uniform sampler2D colorTexture;
 uniform vec2 parameters; // x = size, y = separation
 uniform vec2 u_texSize;
 
+varying vec2 v_texCoord;
+
 const int MAX_SIZE = 5; // maximum blur radius
 
 void main() {
-  vec2 texSize  = u_texSize;
-  vec2 texCoord = gl_FragCoord.xy / texSize;
+  vec2 texSize = u_texSize;
+  vec2 texCoord = v_texCoord;
 
   vec4 fragColorTemp = texture2D(colorTexture, texCoord);
 
@@ -25,13 +27,12 @@ void main() {
 
   for (int i = -MAX_SIZE; i <= MAX_SIZE; ++i) {
     for (int j = -MAX_SIZE; j <= MAX_SIZE; ++j) {
-      // skip samples beyond current blur size
       if (abs(float(i)) > size || abs(float(j)) > size) {
         continue;
       }
 
-      vec2 offset = vec2(float(i), float(j)) * separation;
-      vec2 sampleCoord = (gl_FragCoord.xy + offset) / texSize;
+      vec2 offset = vec2(float(i), float(j)) * separation / texSize;
+      vec2 sampleCoord = texCoord + offset;
       colorSum += texture2D(colorTexture, sampleCoord).rgb;
       count += 1.0;
     }
@@ -39,4 +40,6 @@ void main() {
 
   vec3 averagedColor = colorSum / count;
   gl_FragColor = vec4(averagedColor, 1.0);
+
+  
 }

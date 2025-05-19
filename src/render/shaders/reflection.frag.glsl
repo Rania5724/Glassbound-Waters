@@ -3,10 +3,11 @@ precision mediump float;
 uniform sampler2D colorTexture;
 uniform sampler2D colorBlurTexture;
 uniform sampler2D maskTexture;
-uniform vec2 u_texSize;
+
+varying vec2 v_texCoord;
 
 void main() {
-  vec2 texCoord = gl_FragCoord.xy / u_texSize;
+  vec2 texCoord = v_texCoord;
 
   vec4 mask      = texture2D(maskTexture,      texCoord);
   vec4 color     = texture2D(colorTexture,     texCoord);

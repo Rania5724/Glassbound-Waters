@@ -68,7 +68,7 @@ class DiffuseMaterial extends Material {
 
 class ReflectiveMaterial extends Material {
     constructor({
-        shininess = 127.0,
+        shininess = 10.0,
         specular = [0.9, 0.9, 0.9],
         isReflective = true,
         color = [0.8, 0.8, 0.8],
@@ -101,7 +101,7 @@ class TransparentMaterial extends Material {
         this.isReflective = isReflective;
 
         this.properties.push("transparent");
-        this.properties.push("no_blinn_phong");
+        //this.properties.push("no_blinn_phong");
 
     }
 }
@@ -145,7 +145,7 @@ class BeachTerrainMaterial extends Material {
 
 class WaterMaterial extends Material {
     constructor({
-        color = [0.0, 0.3, 0.5], 
+        color = [0.0, 0.35, 0.45], 
         opacity = 0.3,
         shininess = 60.0, 
         specular = [0.5, 0.6, 0.7],
@@ -172,10 +172,6 @@ class WaterMaterial extends Material {
  */
 export const sunset_sky = new BackgroundMaterial({
     texture: 'kloppenheim_07_puresky_blur.jpg'
-});
-
-export const beach_sunset = new BackgroundMaterial({
-    texture: 'panoramic-view-beach-sunset.jpg'
 });
 
 export const gray = new DiffuseMaterial({
@@ -208,18 +204,12 @@ export const glass_material = new TransparentMaterial({
 });
 
 export const boat_material = new DiffuseMaterial({
+    texture: 'wood.png',
     shininess: 14.0,
     color: [0.6, 0.4, 0.2]
 });
 
-export const water = new WaterMaterial();
-
-export const bottle = new WaterMaterial({
-    color: [0.6, 0.8, 1.0], 
-    opacity: 0.2,
-    shininess: 20, // Reduced shininess
-    specular: [0.4, 0.5, 0.6] // Adjusted specular values
-});
+export const water = new WaterMaterial({});
 
 export const sand =  new BeachTerrainMaterial();
 

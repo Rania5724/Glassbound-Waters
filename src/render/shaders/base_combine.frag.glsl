@@ -6,12 +6,12 @@ uniform sampler2D specularTexture;
 
 uniform vec2 u_texSize;
 
-const float reflectionScale = 0.5; 
-const float specularScale = 0.5;  
+varying vec2 v_texCoord;
 
 
 void main() {
-  vec2 texCoord = gl_FragCoord.xy / u_texSize;
+  vec2 texSize = u_texSize;
+  vec2 texCoord = v_texCoord;
 
   vec4 base       = texture2D(baseTexture,       texCoord);
   vec4 reflection = texture2D(reflectionTexture, texCoord);
