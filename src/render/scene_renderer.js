@@ -14,13 +14,13 @@ import { SSRShaderRenderer } from "./shader_renderers/ssr_sr.js"
 import { SpecularShaderRenderer } from "./shader_renderers/specular_sr.js"
 import { ColorShaderRenderer } from "./shader_renderers/color_sr.js"
 import { ReflectionColorShaderRenderer } from "./shader_renderers/reflection_color_sr.js"
-import { ProceduralTextureGenerator } from "./procedural_texture_generator.js"
 import { BoxBlurShaderRenderer } from "./shader_renderers/box_blur_sr.js"
 import { ReflectionShaderRenderer } from "./shader_renderers/reflection_sr.js"
 import { BaseCombineShaderRenderer } from "./shader_renderers/base_combine_sr.js"
 import { BloomShaderRenderer } from "./shader_renderers/bloom_sr.js"
 import { BloomBlurShaderRenderer } from "./shader_renderers/bloom_sr.js"
 import { BloomExtractShaderRenderer } from "./shader_renderers/bloom_sr.js"
+import { SharpenShaderRenderer } from "./shader_renderers/sharpen_sr.js"
 
 
 export class SceneRenderer {
@@ -63,15 +63,13 @@ export class SceneRenderer {
         this.bloom = new BloomShaderRenderer(regl, resource_manager);
         this.bloom_blur = new BloomBlurShaderRenderer(regl, resource_manager);
         this.bloom_extract = new BloomExtractShaderRenderer(regl, resource_manager);
-
-
-        this.generator = new ProceduralTextureGenerator(regl, resource_manager);
         this.box_blur = new BoxBlurShaderRenderer(regl, resource_manager);
+        this.sharpen = new SharpenShaderRenderer(regl, resource_manager);
 
         // Create textures & buffer to save some intermediate renders into a texture
-        const names = ["shadows", "base", "transparency", "position", "mask", "normal", "ssr", 
+        const names = ["shadows", "base", "map_mixer", "transparency", "position", "mask", "normal", "ssr", 
             "specular", "reflection_color", "color", "box_blur", "reflection", "final_color", 
-            "bloom_extract", "bloom_blur_0", "bloom_blur_1"];
+            "bloom_extract", "bloom_blur_0", "bloom_blur_1", "bloom","sharpen"];
         names.forEach(name => this.create_texture_and_buffer(name, {}));
        
 
@@ -119,6 +117,30 @@ export class SceneRenderer {
         const [texture, buffer] = this.textures_and_buffers[name];
         return texture;
     }
+    
+    /**
+     * Render the bloom passes
+     * @param {*} passes the number of passes to perform
+     * @returns the texture containing the bloom result
+     * @description The bloom effect is done by first extracting the bright parts of the image,
+     *             then blurring them in two passes (horizontal and vertical) and finally
+     *            combining them with the original image.
+     */
+    render_bloom_passes(passes) {
+        let horizontal = true;
+        let read_texture = this.textures_and_buffers["bloom_extract"][0];
+
+        for (let i = 0; i < passes; i++) {
+            const write_name = horizontal ? "bloom_blur_0" : "bloom_blur_1";
+            this.render_in_texture(write_name, () => {
+                this.bloom_blur.render(read_texture, horizontal ? 0 : 1);
+            });
+            read_texture = this.textures_and_buffers[write_name][0];
+            horizontal = !horizontal;
+        }
+        return read_texture;
+    }
+
 
     /**
      * Core function to render a scene
@@ -235,6 +257,14 @@ export class SceneRenderer {
             Compositing
         ---------------------------------------------------------------*/
 
+        this.render_in_texture("map_mixer", () => {
+            this.map_mixer.render(
+                scene_state,
+                this.texture("shadows"),
+                this.texture("base"),);
+        });
+
+
         this.render_in_texture("final_color", () => {
             this.base_combine.render(
             this.texture("base"), 
@@ -258,8 +288,19 @@ export class SceneRenderer {
             this.bloom_blur.render(this.texture("bloom_blur_0"), 1);
         });
 
+        const blurred_tex = this.render_bloom_passes(10);
+        this.bloom.render(this.texture("final_color"),  scene_state.scene.bloom_enabled, blurred_tex, scene_state.scene.bloom_intensity);
+
+        this.render_in_texture("bloom", () => {
+            this.bloom.render(this.texture("final_color"),  scene_state.scene.bloom_enabled, blurred_tex, scene_state.scene.bloom_intensity);
+        });
+
+        this.render_in_texture("sharpen", () => {
+            this.sharpen.render(this.texture("bloom"), scene_state.scene.sharpen_enabled);
+        });
 
 
+        this.sharpen.render(this.texture("bloom"), scene_state.scene.sharpen_enabled);
         
         // Visualize cubemap
         //this.mirror.env_capture.visualize();
@@ -270,16 +311,17 @@ export class SceneRenderer {
             this.texture("base"), 
         );*/
 
+        // Visualise transparent bottle:
+        /*this.flat_color.render(scene_state);
+        this.blinn_phong.render(scene_state);
+        this.transparent.render(scene_state);*/
 
-        //With Bloom and SSR (kinda), disbale no blinn-phong property in transparency otherwise it's black
-
+        //-------------Debugging----------------
         //this.position.render(scene_state);
         //this.mask.render(scene_state);
         //this.normal.render(scene_state);
         //this.color.render(scene_state);
         //this.ssr.render(scene_state, this.texture("position"), this.texture("normal"), this.texture("mask"), scene_state.scene.ssr_enabled);
-
-
         ///this.specular.render(scene_state);
         //this.reflection_color.render(this.texture("ssr"), this.texture("color"));
         //this.box_blur.render(this.texture("ssr"));
@@ -291,38 +333,11 @@ export class SceneRenderer {
         //this.bloom_extract.render(this.texture("final_color"), scene_state.scene.bloom_threshold);
         //this.bloom_blur.render(this.texture("bloom_extract"), 0);
         //this.bloom_blur.render(this.texture("bloom_blur_0"), 1);
-        const blurred_tex = this.render_bloom_passes(10);
-        this.bloom.render(this.texture("final_color"),  scene_state.scene.bloom_enabled, blurred_tex, scene_state.scene.bloom_intensity);
-
-
-
-
-
-
-
-
-        // Visualise transparent bottle:
-        /*this.flat_color.render(scene_state);
-        this.blinn_phong.render(scene_state);
-        this.transparent.render(scene_state);*/
+        //-----------------Debugging---------------
 
     }
 
-    render_bloom_passes(passes) {
-        let horizontal = true;
-        let read_texture = this.textures_and_buffers["bloom_extract"][0];
-
-        for (let i = 0; i < passes; i++) {
-            const write_name = horizontal ? "bloom_blur_0" : "bloom_blur_1";
-            this.render_in_texture(write_name, () => {
-                this.bloom_blur.render(read_texture, horizontal ? 0 : 1);
-            });
-            read_texture = this.textures_and_buffers[write_name][0];
-            horizontal = !horizontal;
-        }
-        return read_texture;
-    }
-
+    
 
 }
 

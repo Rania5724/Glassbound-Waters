@@ -174,6 +174,19 @@ export const sunset_sky = new BackgroundMaterial({
     texture: 'kloppenheim_07_puresky_blur.jpg'
 });
 
+export const sunset_sky_2 = new BackgroundMaterial({
+    texture: 'belfast_sunset_puresky.jpg',
+    
+});
+
+export const beach = new BackgroundMaterial({
+    texture: 'rogland_clear_night.jpg',
+});
+
+export const sky = new BackgroundMaterial({
+    texture: 'aristea_wreck_puresky.jpg',
+});
+
 export const gray = new DiffuseMaterial({
     color: [0.4, 0.4, 0.4],
     shininess: 0.5

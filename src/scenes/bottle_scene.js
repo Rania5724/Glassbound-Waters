@@ -32,6 +32,7 @@ export class BottleScene extends Scene {
     this.bloom_enabled = true;
     this.bloom_intensity = 0.2;
     this.bloom_threshold = 0.3;
+    this.sharpen_enabled = true;
 
     // Add a map to store removed dynamic objects and their states
     this.removed_dynamic_objects = {};
@@ -67,7 +68,7 @@ export class BottleScene extends Scene {
 
 
     this.render_mesh(this.static_objects, "mesh_water", MATERIALS.water, [2, 6, -2.8], [60, 30, 170]);
-    this.render_mesh(this.static_objects, 'mesh_sphere_env_map', MATERIALS.sunset_sky, [0, 0, 0], [80., 80., 80.]);
+    this.render_mesh(this.static_objects, 'mesh_sphere_env_map', MATERIALS.sunset_sky_2, [0, 0, 0], [80., 80., 80.]);
     this.render_mesh(this.dynamic_objects, 'boat2.obj', MATERIALS.boat_material, [-1, 0, 0.25], [2, 2, 2]);
     this.render_mesh(this.dynamic_objects, 'bottle2.obj', MATERIALS.mirror, [0, 0, 0], [2.5, 2.5, 2.5]);
     this.actors["boat"] = this.dynamic_objects[0];
@@ -114,7 +115,7 @@ export class BottleScene extends Scene {
     const base_translation = this.actors["bottle"].translation ?? [0, 0.0, 0];
     const base_scale = this.actors["bottle"].scale ?? [1, 1, 1];
 
-    const bob_amplitude = 0.015; 
+    const bob_amplitude = 0.03; 
     const bob = Math.sin(this.phase) * bob_amplitude;
 
     const sway_amplitude = 0.005;
@@ -130,8 +131,6 @@ export class BottleScene extends Scene {
   };
 
 }
-
-
 
 
   /**
@@ -232,13 +231,17 @@ export class BottleScene extends Scene {
 
     });
 
-    create_slider("Bloom Intensity", [0, 10], (value) => {
+    create_slider("Bloom Intensity", [2, 10], (value) => {
         this.bloom_intensity = value / 10.0;
     }); 
 
-    create_slider("Bloom Threshold", [0, 10], (value) => {
+    create_slider("Bloom Threshold", [3, 10], (value) => {
         this.bloom_threshold = value / 10.0;
     }); 
+
+    create_button_with_hotkey("Toggle Sharpen", "Z", () => {
+      this.sharpen_enabled = !this.sharpen_enabled;
+    });
     
 
   }

@@ -10,7 +10,7 @@ varying vec2 v_texCoord;
 
 void main() {
     if (enabled.x == 0.0) {
-        gl_FragColor = texture2D(u_scene, v_texCoord);
+        gl_FragColor = vec4(texture2D(u_scene, v_texCoord).rgb * 1.2, 1.0); // Adjust brightness if bloom is disabled just to avoid it being too dark
         return;
     }
     vec3 sceneColor = texture2D(u_scene, v_texCoord).rgb;

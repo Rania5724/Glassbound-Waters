@@ -65,7 +65,7 @@ export class ResourceManager{
 
         // Textures which are not loaded from files but created in code
         generate_textures(regl, resources);
-        this.resources = resources; // Set resources before adding procedural mesh
+        this.resources = resources;
 
         this.add_procedural_mesh("fullscreen_quad", cg_mesh_make_plane());
         return this;
@@ -143,6 +143,10 @@ export class ResourceManager{
             'kloppenheim_07_puresky_blur.jpg',
             'pine.png',
             'wood.png',
+            'aristea_wreck_puresky.jpg',
+            'rogland_clear_night.jpg',
+            'belfast_sunset_puresky.jpg',
+
           ];
     }
 
@@ -165,6 +169,7 @@ export class ResourceManager{
             'box_blur.frag.glsl', 'base_combine.frag.glsl',
             'bloom_combine.frag.glsl', 'bloom_extract.frag.glsl',
             'bloom_blur.frag.glsl', 
+            'sharpen.frag.glsl','gamma.frag.glsl',
           ];
     }
 
