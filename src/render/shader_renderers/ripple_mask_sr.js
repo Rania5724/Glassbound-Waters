@@ -1,12 +1,12 @@
 import { ShaderRenderer } from "./shader_renderer.js";
 
-export class NormalShaderRenderer extends ShaderRenderer {
+export class RippleMaskShaderRenderer extends ShaderRenderer {
   constructor(regl, resource_manager) {
     super(
       regl,
       resource_manager,
       `basic.vert.glsl`,
-      `normal.frag.glsl`
+      `mask.frag.glsl`
     );
   }
 
@@ -16,8 +16,7 @@ export class NormalShaderRenderer extends ShaderRenderer {
 
     for (const obj of scene.objects) {
       const mesh = this.resource_manager.get_mesh(obj.mesh_reference);
-
-      if (this.exclude_object(obj)) continue;
+      const ripples = obj.mesh_reference == "boat2.obj" || obj.mesh_reference == "bottle2.obj";
 
       const {
         mat_model_view,
@@ -25,43 +24,25 @@ export class NormalShaderRenderer extends ShaderRenderer {
         mat_normals_model_view,
       } = scene.camera.object_matrices.get(obj);
 
-      let normal_map = null;
-      let hasNormalMap = 0.0;
-
-      if (obj.material.normal_map) {
-        normal_map = this.resource_manager.get_texture(obj.material.normal_map);
-        hasNormalMap = 1.0;
-      }
-      else{
-        normal_map = this.resource_manager.get_texture("water-normal.jpg");
-        hasNormalMap = 0.0;
-      }
-
-
       inputs.push({
         mesh: mesh,
         mat_model_view_projection: mat_model_view_projection,
         mat_model_view: mat_model_view,
         mat_normals_model_view: mat_normals_model_view,
-        normal_map: normal_map, 
-        hasNormalMap: hasNormalMap,
+        u_isReflective: ripples ? 1.0 : 0.0,
       });
     }
 
     this.pipeline(inputs);
   }
-  
-  exclude_object(obj) {
-    return obj.material.properties.includes("environment");
-  }
+
 
   uniforms(regl) {
     return {
-      mat_model_view_projection: regl.prop("mat_model_view_projection"),
-      mat_normals_model_view: regl.prop("mat_normals_model_view"),
-      mat_model_view: regl.prop("mat_model_view"),
-      normal_map: regl.prop("normal_map"),
-      hasNormalMap: regl.prop("hasNormalMap"),
+        mat_model_view_projection: regl.prop("mat_model_view_projection"),
+        mat_normals_model_view: regl.prop("mat_normals_model_view"),
+        mat_model_view: regl.prop("mat_model_view"),
+        u_isReflective: regl.prop("u_isReflective"),
     };
   }
 

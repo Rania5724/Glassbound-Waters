@@ -25,7 +25,7 @@ export class ReflectionShaderRenderer extends ShaderRenderer {
      * @param {*} rendered_shadows a texture containing the shadows information
      * @param {*} rendered_blinn_phong a texture with the objects colors & shading 
      */
-    render(colorTexture, colorBlurTexture, maskTexture){
+    render(colorTexture, colorBlurTexture, maskTexture, roughness){
         const inputs = [];
 
         const mesh = this.resource_manager.get_mesh("fullscreen_quad"); 
@@ -37,6 +37,7 @@ export class ReflectionShaderRenderer extends ShaderRenderer {
             colorTexture: colorTexture,
             colorBlurTexture: colorBlurTexture,
             maskTexture: maskTexture,
+            roughness: roughness,
         });
         this.pipeline(inputs);
     }
@@ -47,6 +48,7 @@ export class ReflectionShaderRenderer extends ShaderRenderer {
             colorTexture: regl.prop('colorTexture'),
             colorBlurTexture: regl.prop('colorBlurTexture'),
             maskTexture: regl.prop('maskTexture'),
+            roughness: regl.prop('roughness'),
         };
     }
 

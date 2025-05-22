@@ -29,6 +29,7 @@ class Material {
         this.opacity = default_opacity;
         this.ior = default_ior;
         this.isReflective = false;
+        this.normal_map = null;
         this.properties = [];
     }
 }
@@ -70,13 +71,11 @@ class ReflectiveMaterial extends Material {
     constructor({
         shininess = 10.0,
         specular = [0.9, 0.9, 0.9],
-        isReflective = true,
         color = [0.8, 0.8, 0.8],
     } = {}){
         super()
         this.shininess = shininess;
         this.specular = specular;
-        this.isReflective = isReflective;
         this.color = color;
         this.properties.push("reflective");
     }
@@ -130,7 +129,6 @@ class TerrainMaterial extends Material {
 class BeachTerrainMaterial extends Material {
     constructor({
         color = [0.9, 0.8, 0.6], 
-        texture = "sand.png",
         shininess =  8.0,
         specular = [0.05, 0.05, 0.05],
     } = {}) {
@@ -138,18 +136,19 @@ class BeachTerrainMaterial extends Material {
         this.color = color;
         this.shininess = shininess;
         this.specular = specular;
-        this.texture = texture;
     }
 }
 
 
 class WaterMaterial extends Material {
     constructor({
-        color = [0.0, 0.35, 0.45], 
+        color = [0.0, 0.4, 0.45], //[0.635, 0.91, 0.91], 
         opacity = 0.3,
         shininess = 60.0, 
         specular = [0.5, 0.6, 0.7],
         isReflective = true,
+        texture = 'water.jpg',
+        normal_map = 'water-normal.jpg',
     } = {}) {
         super();
         this.color = color;
@@ -157,6 +156,8 @@ class WaterMaterial extends Material {
         this.shininess = shininess;
         this.specular = specular;
         this.isReflective = isReflective;
+        this.texture = texture;
+        this.normal_map = normal_map;
 
         this.properties.push("transparent");
     }
@@ -177,10 +178,6 @@ export const sunset_sky = new BackgroundMaterial({
 export const sunset_sky_2 = new BackgroundMaterial({
     texture: 'belfast_sunset_puresky.jpg',
     
-});
-
-export const beach = new BackgroundMaterial({
-    texture: 'rogland_clear_night.jpg',
 });
 
 export const sky = new BackgroundMaterial({

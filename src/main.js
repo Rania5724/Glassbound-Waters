@@ -155,6 +155,7 @@ async function main() {
     const scene_state = {
       scene: active_scene,
       frame: frame,
+      time: frame.time,
       background_color: background_color,
       ui_params: { ...ui_global_params, ...active_scene.ui_params },
     }

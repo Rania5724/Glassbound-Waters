@@ -146,6 +146,8 @@ export class ResourceManager{
             'aristea_wreck_puresky.jpg',
             'rogland_clear_night.jpg',
             'belfast_sunset_puresky.jpg',
+            'water.jpg',
+            'water-normal.jpg',
 
           ];
     }
@@ -169,7 +171,8 @@ export class ResourceManager{
             'box_blur.frag.glsl', 'base_combine.frag.glsl',
             'bloom_combine.frag.glsl', 'bloom_extract.frag.glsl',
             'bloom_blur.frag.glsl', 
-            'sharpen.frag.glsl','gamma.frag.glsl',
+            'sharpen.frag.glsl','gamma.frag.glsl','water.frag.glsl',
+            'water.vert.glsl'
           ];
     }
 

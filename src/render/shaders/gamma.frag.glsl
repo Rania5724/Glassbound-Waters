@@ -1,14 +1,19 @@
 precision mediump float;
 
-uniform vec2 gamma;
 uniform sampler2D colorTexture;
-uniform vec2 u_texSize; 
+uniform float gamma;
+uniform float enabled;
 
-varying vec2 v_texCoord; 
+varying vec2 v_texCoord;
 
 void main() {
-  vec2 texCoord = gl_FragCoord.xy / u_texSize;
-  vec4 color = texture2D(colorTexture, texCoord);
-  color.rgb = pow(color.rgb, vec3(gamma.y));
-  gl_FragColor = color;
+    vec4 color = texture2D(colorTexture, v_texCoord);
+
+    if (enabled == 0.0) {
+        gl_FragColor = color;
+        return;
+    }
+    color.rgb = pow(color.rgb, vec3(1.0 / gamma));
+
+    gl_FragColor = color;
 }

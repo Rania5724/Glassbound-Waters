@@ -21,7 +21,7 @@ export class BoxBlurShaderRenderer extends ShaderRenderer {
             mat_model_view_projection: identity,
             colorTexture: colorTexture,
             u_texSize: [colorTexture.width, colorTexture.height],
-            parameters: [6.0, 2.0],
+            parameters: [5.0, 2],
         }];
 
         this.pipeline(inputs);

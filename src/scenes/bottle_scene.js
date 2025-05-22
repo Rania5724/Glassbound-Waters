@@ -29,10 +29,17 @@ export class BottleScene extends Scene {
     this.boat_visible = true;
     this.water_visible = true;
     this.ssr_enabled = true;
+    this.ssr_max_distance = 1.2;
     this.bloom_enabled = true;
     this.bloom_intensity = 0.2;
     this.bloom_threshold = 0.3;
     this.sharpen_enabled = true;
+    this.ssr_roughness = 0.1;
+    this.gamma_enabled = true;
+    this.gamma = 1.0 / 1.5;
+    this.water_enabled = true;
+    this.wave_strength = 0.1;
+    this.has_fallen = false;
 
     // Add a map to store removed dynamic objects and their states
     this.removed_dynamic_objects = {};
@@ -61,18 +68,23 @@ export class BottleScene extends Scene {
     const height_map = this.procedural_texture_generator.compute_texture(
       "perlin_heightmap", 
       noise_functions.FBM, 
-      {width: 96, height: 96, mouse_offset: [-12.24, 8.15]}
+      {width: 128, height: 128, mouse_offset: [-12.24, 8.15]}
     );
     this.water_mesh = generate_wavy_sea_mesh_from_heightmap(height_map, 0.02);
     this.resource_manager.add_procedural_mesh("mesh_water", this.water_mesh);
+    this.sand_mesh = generate_floating_sand_island(height_map, 0.02);
+    this.resource_manager.add_procedural_mesh("mesh_sand", this.sand_mesh);
 
 
     this.render_mesh(this.static_objects, "mesh_water", MATERIALS.water, [2, 6, -2.8], [60, 30, 170]);
     this.render_mesh(this.static_objects, 'mesh_sphere_env_map', MATERIALS.sunset_sky_2, [0, 0, 0], [80., 80., 80.]);
-    this.render_mesh(this.dynamic_objects, 'boat2.obj', MATERIALS.boat_material, [-1, 0, 0.25], [2, 2, 2]);
-    this.render_mesh(this.dynamic_objects, 'bottle2.obj', MATERIALS.mirror, [0, 0, 0], [2.5, 2.5, 2.5]);
+    this.render_mesh(this.dynamic_objects, 'boat2.obj', MATERIALS.boat_material, [-1, 0, 0.28], [2, 2, 2]);
+    this.render_mesh(this.dynamic_objects, 'bottle2.obj', MATERIALS.mirror, [0, 0, 0.1], [2.5, 2.5, 2.5]);
     this.actors["boat"] = this.dynamic_objects[0];
     this.actors["bottle"] = this.dynamic_objects[1];
+    this.actors["boat"].base_translation = this.actors["boat"].translation ?? [-1, 0, 0.28];
+    this.actors["bottle"].base_translation = this.actors["bottle"].translation ?? [0, 0, 0.1];
+
 
     this.objects = this.static_objects.concat(this.dynamic_objects);
  
@@ -83,52 +95,89 @@ export class BottleScene extends Scene {
    */
   initialize_actor_actions() {
     this.phase = 0;
+    this.actors["bottle"].evolve = (dt) => {
+      if (!this.actors["bottle"]) return;
 
-    this.actors["boat"].evolve = (dt) => {
+      // ---- Comment to disable bottle falling
+      if (!this.water_visible ) {
+        if (!this.actors["bottle"].falling ) {
+          this.actors["bottle"].falling = true;
+          this.actors["bottle"].frozen_fall_pos = [...this.actors["bottle"].translation];
+        }
+        this.actors["bottle"].translation[0] = this.actors["bottle"].frozen_fall_pos[0];
+        this.actors["bottle"].translation[1] = this.actors["bottle"].frozen_fall_pos[1];
+        this.actors["bottle"].translation[2] -= 80.0 * dt;
+        this.actors["bottle"].scale = this.actors["bottle"].scale ?? [1, 1, 1];
+        if (this.actors["bottle"].translation[2] < -150) {
+          this.actors["bottle"].translation[2] = -150;
+          return;
+        }
+        return;
+      }
+
+      this.actors["bottle"].falling = false;
+      delete this.actors["bottle"].frozen_fall_pos;
+      // ----
+
       const frequency = 0.25;
       this.phase += dt * 2 * Math.PI * frequency;
       this.phase %= 2 * Math.PI;
 
-      const base_translation = this.actors["boat"].translation ?? [0, 0.3, 0];
-      const base_scale = this.actors["boat"].scale ?? [1, 1, 1];
-
-      const bob_amplitude = 0.03;
+      const base_translation = this.actors["bottle"].base_translation;
+      const bob_amplitude = 0.12 * (1 + this.wave_strength) * 1.5;
       const bob = Math.sin(this.phase) * bob_amplitude;
 
-      const sway_amplitude = 0.015;
-      const sway = Math.sin(this.phase * 1.5) * sway_amplitude;
+      const sway_amplitude = 0.06 * (1 + this.wave_strength) * 1.5;
+      const sway = Math.sin(this.phase * 1.2) * sway_amplitude;
 
-      this.actors["boat"].translation = [
-        base_translation[0] + sway, 
-        base_translation[1] + bob,  
+      this.actors["bottle"].translation = [
+        base_translation[0] + sway,
+        base_translation[1] + bob,
         base_translation[2]
       ];
-
-      this.actors["boat"].scale = base_scale;
   };
+    this.actors["boat"].evolve = (dt) => {
+      if (!this.actors["boat"]) return;
 
-  this.actors["bottle"].evolve = (dt) => {
-    const frequency = 0.25;
-    this.phase += dt * 2 * Math.PI * frequency;
-    this.phase %= 2 * Math.PI;
+      // ---- Comment to disable boat falling
+      if (!this.water_visible ) {
+        if (!this.actors["boat"].falling) {
+          this.actors["boat"].falling = true;
+          this.actors["boat"].frozen_fall_pos = [...this.actors["boat"].translation];
+        }
+        this.actors["boat"].translation[0] = this.actors["boat"].frozen_fall_pos[0];
+        this.actors["boat"].translation[1] = this.actors["boat"].frozen_fall_pos[1];
+        this.actors["boat"].translation[2] -= 80.0 * dt;
+        this.actors["boat"].scale = this.actors["boat"].scale ?? [1, 1, 1];
+        if (this.actors["boat"].translation[2] < -150) {
+          this.actors["boat"].translation[2] = -150;
+          return;
+        }
+        
+        return;
+      }
 
-    const base_translation = this.actors["bottle"].translation ?? [0, 0.0, 0];
-    const base_scale = this.actors["bottle"].scale ?? [1, 1, 1];
+      this.actors["boat"].falling = false;
+      delete this.actors["boat"].frozen_fall_pos;
+      // ----
 
-    const bob_amplitude = 0.03; 
-    const bob = Math.sin(this.phase) * bob_amplitude;
+      const frequency = 0.25;
+      this.phase += dt * 2 * Math.PI * frequency;
+      this.phase %= 2 * Math.PI;
 
-    const sway_amplitude = 0.005;
-    const sway = Math.sin(this.phase * 1.2) * sway_amplitude;
+      const base_translation = this.actors["boat"].base_translation;
+      const bob_amplitude = 0.12 * (1 + this.wave_strength) * 1.5;
+      const bob = Math.sin(this.phase) * bob_amplitude;
 
-    this.actors["bottle"].translation = [
-      base_translation[0] + sway,
-      base_translation[1] + bob,
-      base_translation[2]
-    ];
+      const sway_amplitude = 0.06 * (1 + this.wave_strength) * 1.5;
+      const sway = Math.sin(this.phase * 1.2) * sway_amplitude;
 
-    this.actors["bottle"].scale = base_scale;
-  };
+      this.actors["boat"].translation = [
+        base_translation[0] + sway,
+        base_translation[1] + bob,
+        base_translation[2]
+      ];
+    };
 
 }
 
@@ -165,16 +214,27 @@ export class BottleScene extends Scene {
         look_at : [0, 0, 0]
       })
     });
+
     create_hotkey_action("Preset view", "4", () => {
       this.camera.set_preset_view({
         distance_factor : 1.5,
-        angle_y: 0.06140122440170073,
-        angle_z: 14.512318530717959,
+        angle_y: -0.9825987755983001,
+        angle_z: 14.242318530717966,
         look_at : [0, 0, 0]
       })
     });
 
-    create_hotkey_action("Log angles", "5", () => {
+    create_hotkey_action("Preset view", "5", () => {
+      this.camera.set_preset_view({
+        distance_factor : 1.5,
+        angle_y: -0.5805987755983,
+        angle_z: 11.629318530717976,
+        look_at : [0, 0, 0]
+      })
+    }
+    );
+
+    create_hotkey_action("Log angles", "6", () => {
       console.log("Camera angles:", {
         angle_z: this.camera.angle_z,
         angle_y: this.camera.angle_y,
@@ -190,6 +250,8 @@ export class BottleScene extends Scene {
         this.render_mesh(this.dynamic_objects, 'bottle2.obj', MATERIALS.mirror, bottleState.translation, bottleState.scale);
         this.actors["bottle"] = this.dynamic_objects[this.dynamic_objects.length - 1];
         this.actors["bottle"].evolve = bottleState.evolve;
+        this.actors["bottle"].base_translation = bottleState.base_translation;
+
       }
     
       this.bottle_visible = !this.bottle_visible;
@@ -205,6 +267,8 @@ export class BottleScene extends Scene {
         this.render_mesh(this.dynamic_objects, 'boat2.obj', MATERIALS.boat_material, boatState.translation, boatState.scale);
         this.actors["boat"] = this.dynamic_objects[this.dynamic_objects.length - 1];
         this.actors["boat"].evolve = boatState.evolve;
+        this.actors["boat"].base_translation = boatState.base_translation;
+
       }
     
       this.boat_visible = !this.boat_visible;
@@ -224,25 +288,60 @@ export class BottleScene extends Scene {
 
     create_button_with_hotkey("Toggle SSR", "R", () => {
       this.ssr_enabled = !this.ssr_enabled;
+      console.log("SSR enabled:", this.ssr_enabled);
+    });
+
+    create_slider("Reflection Distance", [12, 250], (value) => {
+        this.ssr_max_distance = value / 10.0; ;
+        console.log("SSR max distance:", this.ssr_max_distance);
+    }); 
+
+    create_slider("Reflection Blur", [1, 6], (value) => {
+        this.ssr_roughness = value / 10.0;
+        console.log("SSR roughness:", this.ssr_roughness);
     });
 
     create_button_with_hotkey("Toggle Bloom", "L", () => {
       this.bloom_enabled = !this.bloom_enabled;
+      console.log("Bloom enabled:", this.bloom_enabled);
 
     });
 
     create_slider("Bloom Intensity", [2, 10], (value) => {
         this.bloom_intensity = value / 10.0;
+        console.log("Bloom intensity:", this.bloom_intensity);
     }); 
 
     create_slider("Bloom Threshold", [3, 10], (value) => {
         this.bloom_threshold = value / 10.0;
+        console.log("Bloom threshold:", this.bloom_threshold);
     }); 
 
     create_button_with_hotkey("Toggle Sharpen", "Z", () => {
       this.sharpen_enabled = !this.sharpen_enabled;
+      console.log("Sharpen enabled:", this.sharpen_enabled);
     });
-    
+
+    create_button_with_hotkey("Toggle Gamma", "G", () => {
+      this.gamma_enabled = !this.gamma_enabled;
+      console.log("Gamma enabled:", this.gamma_enabled);
+    });
+
+    create_slider("Gamma", [1, 10], (value) => {
+        this.gamma =  (1/3) + (value - 1) * (3.0 - 1/3) / (10 - 1);
+        console.log("Gamma:", this.gamma);
+    });
+
+    create_button_with_hotkey("Toggle Waves", "W", () => {
+      this.water_enabled = !this.water_enabled;
+      console.log("Water enabled:", this.water_enabled);
+    });
+
+    create_slider("Wave Strength", [2, 10], (value) => {
+      this.wave_strength = value / 10.0;
+      console.log("Wave strength:", this.wave_strength);
+    });
+
 
   }
 
@@ -255,6 +354,7 @@ export class BottleScene extends Scene {
     })
 
   }
+  
 
 
 }

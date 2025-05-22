@@ -1,5 +1,6 @@
 import { ShaderRenderer } from "./shader_renderer.js";
 import * as mat4 from "../../../lib/gl-matrix_3.3.0/esm/mat4.js";
+import { max } from "../../../lib/gl-matrix_3.3.0/esm/vec3.js";
 
 
 export class SSRShaderRenderer extends ShaderRenderer {
@@ -15,7 +16,7 @@ export class SSRShaderRenderer extends ShaderRenderer {
     /**
      * Render screen-space reflections only on objects marked as reflective
      */
-    render(scene_state, rendered_position, rendered_normal, rendered_mask, enabled) {
+    render(scene_state, rendered_position, rendered_normal, rendered_mask, enabled, maxDistance) {
         const scene = scene_state.scene;
         const inputs = [];
 
@@ -31,6 +32,7 @@ export class SSRShaderRenderer extends ShaderRenderer {
             positionTexture: rendered_position,
             normalTexture: rendered_normal,
             maskTexture: rendered_mask,
+            maxDistance: maxDistance,
         });
         this.pipeline(inputs);
     }
@@ -44,6 +46,7 @@ export class SSRShaderRenderer extends ShaderRenderer {
             maskTexture: regl.prop("maskTexture"),
             enabled: regl.prop("enabled"),
             u_texSize: regl.prop("u_texSize"),
+            maxDistance: regl.prop("maxDistance"),
         };
     }
 

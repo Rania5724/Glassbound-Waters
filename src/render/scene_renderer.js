@@ -21,6 +21,9 @@ import { BloomShaderRenderer } from "./shader_renderers/bloom_sr.js"
 import { BloomBlurShaderRenderer } from "./shader_renderers/bloom_sr.js"
 import { BloomExtractShaderRenderer } from "./shader_renderers/bloom_sr.js"
 import { SharpenShaderRenderer } from "./shader_renderers/sharpen_sr.js"
+import { WaterShaderRenderer } from "./shader_renderers/water_sr.js"
+import { GammaShaderRenderer } from "./shader_renderers/gamma_sr.js"
+import { RippleMaskShaderRenderer } from "./shader_renderers/ripple_mask_sr.js"
 
 
 export class SceneRenderer {
@@ -65,11 +68,14 @@ export class SceneRenderer {
         this.bloom_extract = new BloomExtractShaderRenderer(regl, resource_manager);
         this.box_blur = new BoxBlurShaderRenderer(regl, resource_manager);
         this.sharpen = new SharpenShaderRenderer(regl, resource_manager);
+        this.water = new WaterShaderRenderer(regl, resource_manager);
+        this.gamma = new GammaShaderRenderer(regl, resource_manager);
+        this.ripples = new RippleMaskShaderRenderer(regl, resource_manager);
 
         // Create textures & buffer to save some intermediate renders into a texture
         const names = ["shadows", "base", "map_mixer", "transparency", "position", "mask", "normal", "ssr", 
             "specular", "reflection_color", "color", "box_blur", "reflection", "final_color", 
-            "bloom_extract", "bloom_blur_0", "bloom_blur_1", "bloom","sharpen"];
+            "bloom_extract", "bloom_blur_0", "bloom_blur_1", "bloom","sharpen", "ripples"];
         names.forEach(name => this.create_texture_and_buffer(name, {}));
        
 
@@ -166,6 +172,9 @@ export class SceneRenderer {
         /*---------------------------------------------------------------
              Base Render Passes
         ---------------------------------------------------------------*/
+         this.render_in_texture("ripples", () => {  
+            this.ripples.render(scene_state);
+        });
 
         // Render call: the result will be stored in the texture "base"
         this.render_in_texture("base", () =>{
@@ -178,6 +187,10 @@ export class SceneRenderer {
 
             // Render the terrain
             this.terrain.render(scene_state);
+
+            if (scene_state.scene.water_enabled) {
+                this.water.render(scene_state, scene_state.scene.wave_strength, this.texture("ripples"));
+            }
 
             // Render shaded objects
             this.blinn_phong.render(scene_state);
@@ -233,8 +246,9 @@ export class SceneRenderer {
             this.color.render(scene_state);
         });
 
+
         this.render_in_texture("ssr", () => {
-            this.ssr.render(scene_state, this.texture("position"), this.texture("normal"), this.texture("mask"), scene_state.scene.ssr_enabled);
+            this.ssr.render(scene_state, this.texture("position"), this.texture("normal"), this.texture("mask"), scene_state.scene.ssr_enabled, scene_state.scene.ssr_max_distance);
         });
 
         this.render_in_texture("specular", () => {
@@ -246,11 +260,11 @@ export class SceneRenderer {
         });
 
         this.render_in_texture("box_blur", () => {
-            this.box_blur.render(this.texture("ssr"));
+            this.box_blur.render(this.texture("reflection_color"));
         });
 
         this.render_in_texture("reflection", () => {
-            this.reflection.render(this.texture("reflection_color"), this.texture("box_blur"), this.texture("mask"));
+            this.reflection.render(this.texture("reflection_color"), this.texture("box_blur"), this.texture("mask"), scene_state.scene.ssr_roughness);
         });
 
         /*---------------------------------------------------------------
@@ -289,8 +303,6 @@ export class SceneRenderer {
         });
 
         const blurred_tex = this.render_bloom_passes(10);
-        this.bloom.render(this.texture("final_color"),  scene_state.scene.bloom_enabled, blurred_tex, scene_state.scene.bloom_intensity);
-
         this.render_in_texture("bloom", () => {
             this.bloom.render(this.texture("final_color"),  scene_state.scene.bloom_enabled, blurred_tex, scene_state.scene.bloom_intensity);
         });
@@ -299,8 +311,13 @@ export class SceneRenderer {
             this.sharpen.render(this.texture("bloom"), scene_state.scene.sharpen_enabled);
         });
 
+       
 
-        this.sharpen.render(this.texture("bloom"), scene_state.scene.sharpen_enabled);
+
+        //this.sharpen.render(this.texture("bloom"), scene_state.scene.sharpen_enabled);
+        this.gamma.render(this.texture("sharpen"), scene_state.scene.gamma ,scene_state.scene.gamma_enabled);
+        //this.normal.render(scene_state);
+        //this.ripples.render(scene_state);
         
         // Visualize cubemap
         //this.mirror.env_capture.visualize();
@@ -322,9 +339,9 @@ export class SceneRenderer {
         //this.normal.render(scene_state);
         //this.color.render(scene_state);
         //this.ssr.render(scene_state, this.texture("position"), this.texture("normal"), this.texture("mask"), scene_state.scene.ssr_enabled);
-        ///this.specular.render(scene_state);
+        //this.specular.render(scene_state);
         //this.reflection_color.render(this.texture("ssr"), this.texture("color"));
-        //this.box_blur.render(this.texture("ssr"));
+        //this.box_blur.render(this.texture("reflection_color"));
         //this.reflection.render(this.texture("reflection_color"), this.texture("box_blur"), this.texture("mask"));
         /*this.base_combine.render(
             this.texture("base"), 
@@ -334,6 +351,7 @@ export class SceneRenderer {
         //this.bloom_blur.render(this.texture("bloom_extract"), 0);
         //this.bloom_blur.render(this.texture("bloom_blur_0"), 1);
         //-----------------Debugging---------------
+
 
     }
 

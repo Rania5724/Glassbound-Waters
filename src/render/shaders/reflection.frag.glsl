@@ -3,6 +3,7 @@ precision mediump float;
 uniform sampler2D colorTexture;
 uniform sampler2D colorBlurTexture;
 uniform sampler2D maskTexture;
+uniform float roughness;
 
 varying vec2 v_texCoord;
 
@@ -20,7 +21,6 @@ void main() {
     return;
   }
 
-  float roughness = clamp(mask.g, 0.0, 1.0);
-
-  gl_FragColor = mix(color, colorBlur, roughness) * amount;
+  gl_FragColor = mix(color, colorBlur, roughness);
+  
 }
